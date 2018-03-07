@@ -2,6 +2,7 @@ import time
 import errno
 import gevent
 import operator
+import sys
 from collections import OrderedDict
 from .protocol import BaseProtocol
 from .p2p_protocol import P2PProtocol
@@ -212,6 +213,11 @@ class Peer(gevent.Greenlet):
             protocol, cmd_id = self.protocol_cmd_id_from_packet(packet)
             log.debug('recv packet', peer=self, cmd=protocol.cmd_by_id[cmd_id], protocol=protocol.name, orig_cmd_id=packet.cmd_id)
             packet.cmd_id = cmd_id  # rewrite
+
+            # PY3: fix bytearray when chunked.    linyize 2018.3.7
+            if sys.version_info.major > 2 and isinstance(packet.payload, bytearray):
+                packet.payload = bytes(packet.payload)
+
             protocol.receive_packet(packet)
         except UnknownCommandError as e:
             log.debug('received unknown cmd', peer=self, error=e, packet=packet)
