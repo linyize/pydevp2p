@@ -69,6 +69,11 @@ class PeerManager(WiredService):
                 decode_hex(self.config['node']['privkey_hex']))
 
         self.listen_addr = (self.config['p2p']['listen_host'], self.config['p2p']['listen_port'])
+
+        # set peers scope since boot miner and pos node need different configuration.
+        self.config['p2p']['min_peers'] = app.config['p2p']['min_peers']
+        self.config['p2p']['max_peers'] = app.config['p2p']['max_peers']
+
         self.server = StreamServer(self.listen_addr, handle=self._on_new_connection)
 
     def on_hello_received(self, proto, version, client_version_string, capabilities,
