@@ -78,6 +78,9 @@ class Address(object):
     def ip(self):
         return str(self._ip)
 
+    def get_ip_address(self):
+        return self._ip
+
     def update(self, addr):
         if not self.tcp_port:
             self.tcp_port = addr.tcp_port
@@ -481,9 +484,23 @@ class DiscoveryProtocol(kademlia.WireInterface):
         """
         assert isinstance(neighbours, list)
         assert not neighbours or isinstance(neighbours[0], Node)
+
+        # split internal and external network here.
+
         nodes = []
         neighbours = sorted(neighbours)
+
+        # split internal and external network according to both flags
+        from_internal = node.address.get_ip_address().is_private()
+
         for n in neighbours:
+            ip_address = n.address.get_ip_address()
+            is_private = isinstance(ip_address, ipaddress.IPv4Address) and ip_address.is_private()
+
+            if from_internal ^ is_private:
+                log.debug('not connect in and out', requestor=node.address.ip, known=n.address.ip)
+                continue
+
             l = n.address.to_endpoint() + [n.pubkey]
             nodes.append(l)
         log.debug('>>> neighbours', remoteid=node, count=len(nodes), local=self.this_node,
@@ -532,6 +549,8 @@ class NodeDiscovery(BaseService, DiscoveryProtocolTransport):
         log.info('NodeDiscovery init')
         # man setsockopt
         self.protocol = DiscoveryProtocol(app=self.app, transport=self)
+
+
 
     @property
     def address(self):
